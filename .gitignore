@@ -9,7 +9,7 @@
 /bridge/stremio/
 /bridge/wrapper.hpp
 .DS_Store
-##/.build
+/.build
 /Packages
 xcuserdata/
 DerivedData/
