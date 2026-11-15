@@ -8,6 +8,7 @@ import PackageDescription
 let package = Package(
     name: "StremioCore",
     platforms: [
+        .macOS(.v12),
         .macCatalyst(.v13),
         .iOS(.v12),
         .visionOS(.v1),

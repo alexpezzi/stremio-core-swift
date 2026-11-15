@@ -10,7 +10,8 @@ import SwiftProtobuf
 import Wrapper
 import os.log
 
-#if targetEnvironment(macCatalyst)
+#if os(macOS) || targetEnvironment(macCatalyst)
+import IOKit
 #else
 import UIKit
 #endif
@@ -131,7 +132,7 @@ public class Core {
 }
 
 fileprivate func getDeviceInfo() -> String {
-    #if targetEnvironment(macCatalyst)
+    #if os(macOS) || targetEnvironment(macCatalyst)
     let service = IOServiceGetMatchingService(kIOMasterPortDefault,
                                               IOServiceMatching("IOPlatformExpertDevice"))
     var modelIdentifier: String
@@ -168,7 +169,7 @@ extension SwiftProtobuf.Message {
     }
 }
 
-#if targetEnvironment(macCatalyst)
+#if os(macOS) || targetEnvironment(macCatalyst)
 extension OperatingSystemVersion {
     var description: String {
         var patchVersion = ""

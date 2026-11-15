@@ -231,7 +231,7 @@ public class StremioApi {
     
     public static func PlayerTimeChanged(duration: Double, time: Double){
         var action = Stremio_Core_Runtime_Action()
-        #if targetEnvironment(macCatalyst)
+        #if os(macOS) || targetEnvironment(macCatalyst)
         action.player.timeChanged.device = "AppleMacOS"
         #elseif os(iOS)
         action.player.timeChanged.device = "AppleiOS"

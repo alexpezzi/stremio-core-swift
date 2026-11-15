@@ -3,9 +3,18 @@ FRAMEWORK_NAME := StremioCore
 SWIFT_FILE := Package.swift
 .PHONY: all
 
-all: macos ios iossim tvossim tvos visionossim package
+all: macos maccatalyst ios iossim tvossim tvos visionossim package
 
 macos:
+	@cargo build --release --lib --target aarch64-apple-darwin
+	@cargo build --release --lib --target x86_64-apple-darwin
+	@$(RM) -rf target/universal/$(LIBRARY_NAME)-macos.a
+	@mkdir -p target/universal/
+	@lipo -create -output target/universal/$(LIBRARY_NAME)-macos.a \
+		target/aarch64-apple-darwin/release/$(LIBRARY_NAME).a \
+		target/x86_64-apple-darwin/release/$(LIBRARY_NAME).a
+
+maccatalyst:
 	@cargo +nightly build -Z build-std --release --lib --target aarch64-apple-ios-macabi
 	@cargo +nightly build -Z build-std --release --lib --target x86_64-apple-ios-macabi
 	@$(RM) -rf target/universal/$(LIBRARY_NAME)-macabi.a
@@ -57,6 +66,7 @@ framework:
 		-library target/universal/$(LIBRARY_NAME)-ios.a \
 		-library target/universal/$(LIBRARY_NAME)-ios-sim.a \
 		-library target/universal/$(LIBRARY_NAME)-macabi.a \
+		-library target/universal/$(LIBRARY_NAME)-macos.a \
 		-library target/universal/$(LIBRARY_NAME)-visionos-sim.a \
 		-library target/universal/$(LIBRARY_NAME)-tvos-sim.a \
 		-library target/universal/$(LIBRARY_NAME)-tvos.a \
