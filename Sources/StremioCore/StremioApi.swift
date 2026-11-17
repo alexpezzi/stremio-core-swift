@@ -72,6 +72,27 @@ public class StremioApi {
         }
         return nil
     }
+
+    public static func LoadContinueWatching() -> Stremio_Core_Models_LibraryWithFilters? {
+        Core.getState(.continueWatching)
+    }
+
+    public static func LoadContinueWatchingWithFilters(_ request: Stremio_Core_Models_LibraryWithFilters.LibraryRequest) {
+        var action = Stremio_Core_Runtime_Action()
+        action.load.libraryWithFilters.request = request
+        Core.dispatch(action: action, field: .continueWatching)
+    }
+
+    /// Loads the next page of `.library` or `.continueWatching`.
+    public static func LoadNextLibraryPage(field: Stremio_Core_Runtime_Field = .library) {
+        var action = Stremio_Core_Runtime_Action()
+        action.libraryWithFilters.loadNextPage = Google_Protobuf_Empty()
+        Core.dispatch(action: action, field: field)
+    }
+
+    public static func LoadStreamingServer() -> Stremio_Core_Models_StreamingServer? {
+        Core.getState(.streamingServer)
+    }
     
     public static func LoadNextDiscoverCatalogPage() {
         var action = Stremio_Core_Runtime_Action()
@@ -174,9 +195,12 @@ public class StremioApi {
         Core.dispatch(action: action, field: .ctx)
     }
     
-    public static func PullUser() {
+    public static func PullUser(token: String? = nil) {
         var action = Stremio_Core_Runtime_Action()
-        action.ctx.pullUserFromApi = SwiftProtobuf.Google_Protobuf_Empty()
+        action.ctx.pullUserFromApi = Stremio_Core_Runtime_ActionCtx.PullUserFromApi()
+        if let token {
+            action.ctx.pullUserFromApi.token = token
+        }
         Core.dispatch(action: action, field: .ctx)
     }
     
@@ -231,18 +255,34 @@ public class StremioApi {
     
     public static func PlayerTimeChanged(duration: Double, time: Double){
         var action = Stremio_Core_Runtime_Action()
-        #if targetEnvironment(macCatalyst)
-        action.player.timeChanged.device = "AppleMacOS"
-        #elseif os(iOS)
-        action.player.timeChanged.device = "AppleiOS"
-        #elseif os(tvOS)
-        action.player.timeChanged.device = "AppletvOS"
-        #endif
+        action.player.timeChanged.device = playerDevice
         action.player.timeChanged.duration = UInt64(duration) * 1000
         action.player.timeChanged.time =  UInt64(time) * 1000
         Core.dispatch(action: action, field: .player)
     }
     
+    public static func PlayerSeek(duration: Double, time: Double) {
+        var action = Stremio_Core_Runtime_Action()
+        action.player.seekAction.device = playerDevice
+        action.player.seekAction.duration = UInt64(duration) * 1000
+        action.player.seekAction.time = UInt64(time) * 1000
+        Core.dispatch(action: action, field: .player)
+    }
+
+    public static func PlayerMarkVideoAsWatched(video: Stremio_Core_Types_Video, watched: Bool) {
+        var action = Stremio_Core_Runtime_Action()
+        action.player.markVideoAsWatched.video = video
+        action.player.markVideoAsWatched.watched = watched
+        Core.dispatch(action: action, field: .player)
+    }
+
+    public static func PlayerMarkSeasonAsWatched(season: UInt32, watched: Bool) {
+        var action = Stremio_Core_Runtime_Action()
+        action.player.markSeasonAsWatched.season = season
+        action.player.markSeasonAsWatched.watched = watched
+        Core.dispatch(action: action, field: .player)
+    }
+
     public static func PlayerSetStatus(isPaused: Bool){
         var action = Stremio_Core_Runtime_Action()
         action.player.pausedChanged = isPaused
@@ -265,7 +305,7 @@ public class StremioApi {
         Core.dispatch(action: action, field: .addonDetails)
     }
     
-    public static func UninstallAddon(descriptor: Stremio_Core_Types_Descriptor, 
+    public static func UninstallAddon(descriptor: Stremio_Core_Types_AddonDescriptor, 
                                       completionHandler: ((Result<Stremio_Core_Runtime_Event.AddonUninstalled, Stremio_Core_Runtime_Event.Error> ) -> Void )? = nil) {
         handleEvent(callbackType: CallbackType.addonUninstalled, completionHandler: completionHandler)
         var action = Stremio_Core_Runtime_Action()
@@ -273,7 +313,7 @@ public class StremioApi {
         Core.dispatch(action: action)
     }
     
-    public static func InstallAddon(descriptor: Stremio_Core_Types_Descriptor,
+    public static func InstallAddon(descriptor: Stremio_Core_Types_AddonDescriptor,
                                     completionHandler: ((Result<Stremio_Core_Runtime_Event.AddonInstalled, Stremio_Core_Runtime_Event.Error>) -> Void)? = nil) {
         handleEvent(callbackType: CallbackType.addonInstalled, completionHandler: completionHandler)
         var action = Stremio_Core_Runtime_Action()
@@ -281,7 +321,7 @@ public class StremioApi {
         Core.dispatch(action: action)
     }
     
-    public static func UpgradeAddon(descriptor: Stremio_Core_Types_Descriptor,
+    public static func UpgradeAddon(descriptor: Stremio_Core_Types_AddonDescriptor,
                                     completionHandler: ((Result<Stremio_Core_Runtime_Event.AddonUpgraded, Stremio_Core_Runtime_Event.Error> ) -> Void)? = nil) {
         handleEvent(callbackType: CallbackType.addonUpgraded, completionHandler: completionHandler)
         var action = Stremio_Core_Runtime_Action()
@@ -326,11 +366,67 @@ public class StremioApi {
         action.metaDetails.markVideoAsWatched = state
         Core.dispatch(action: action, field: .metaDetails)
     }
+
+    public static func MarkSeasonAsWatched(season: UInt32, watched: Bool) {
+        var action = Stremio_Core_Runtime_Action()
+        action.metaDetails.markSeasonAsWatched.season = season
+        action.metaDetails.markSeasonAsWatched.watched = watched
+        Core.dispatch(action: action, field: .metaDetails)
+    }
+
+    /// Rates the loaded meta item. Pass `nil` to clear the rating.
+    public static func RateMetaItem(_ rating: Stremio_Core_Types_Rating?,
+                                    completionHandler: ((Result<Stremio_Core_Runtime_Event.MetaItemRated, Stremio_Core_Runtime_Event.Error>) -> Void)? = nil) {
+        handleEvent(callbackType: CallbackType.metaItemRated, completionHandler: completionHandler)
+        var action = Stremio_Core_Runtime_Action()
+        action.metaDetails.rate = Stremio_Core_Runtime_ActionMetaDetails.RateArgs()
+        if let rating {
+            action.metaDetails.rate.status = rating
+        }
+        Core.dispatch(action: action, field: .metaDetails)
+    }
+
+    //MARK: - Streaming server URLs
+
+    public static func AddStreamingServerUrl(_ url: String) {
+        var action = Stremio_Core_Runtime_Action()
+        action.ctx.addServerURL = url
+        Core.dispatch(action: action, field: .ctx)
+    }
+
+    public static func DeleteStreamingServerUrl(_ url: String) {
+        var action = Stremio_Core_Runtime_Action()
+        action.ctx.deleteServerURL = url
+        Core.dispatch(action: action, field: .ctx)
+    }
     
     //MARK: - For account related functions
 
-    public static func LoginWithToken(token: String) {
-        //TODO: Implimnet logining with token
+    public static func LoginWithToken(token: String,
+                                      completionHandler: ((Result<Stremio_Core_Runtime_Event.UserAuthenticated, Stremio_Core_Runtime_Event.Error>) -> Void)? = nil) {
+        handleEvent(callbackType: CallbackType.userAuthenticated, completionHandler: completionHandler)
+        var action = Stremio_Core_Runtime_Action()
+        action.ctx.authenticate.loginWithToken.token = token
+        Core.dispatch(action: action, field: .ctx)
+    }
+
+    public static func LoginWithApple(token: String, sub: String, email: String, name: String,
+                                      completionHandler: ((Result<Stremio_Core_Runtime_Event.UserAuthenticated, Stremio_Core_Runtime_Event.Error>) -> Void)? = nil) {
+        handleEvent(callbackType: CallbackType.userAuthenticated, completionHandler: completionHandler)
+        var action = Stremio_Core_Runtime_Action()
+        action.ctx.authenticate.apple.token = token
+        action.ctx.authenticate.apple.sub = sub
+        action.ctx.authenticate.apple.email = email
+        action.ctx.authenticate.apple.name = name
+        Core.dispatch(action: action, field: .ctx)
+    }
+
+    public static func DeleteAccount(password: String,
+                                     completionHandler: ((Result<Stremio_Core_Runtime_Event.UserAccountDeleted, Stremio_Core_Runtime_Event.Error>) -> Void)? = nil) {
+        handleEvent(callbackType: CallbackType.userAccountDeleted, completionHandler: completionHandler)
+        var action = Stremio_Core_Runtime_Action()
+        action.ctx.deleteAccount = password
+        Core.dispatch(action: action, field: .ctx)
     }
     
     public static func Login(email: String, password: String,
@@ -348,6 +444,18 @@ public class StremioApi {
         action.ctx.logout = SwiftProtobuf.Google_Protobuf_Empty()
         Core.dispatch(action: action, field: .ctx)
     }
+}
+
+private var playerDevice: String {
+    #if targetEnvironment(macCatalyst)
+    "AppleMacOS"
+    #elseif os(tvOS)
+    "AppletvOS"
+    #elseif os(visionOS)
+    "ApplevisionOS"
+    #else
+    "AppleiOS"
+    #endif
 }
 
 public protocol MetaItem {

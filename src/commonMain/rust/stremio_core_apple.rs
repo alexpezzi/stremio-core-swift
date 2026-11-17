@@ -19,22 +19,24 @@ use prost::Message;
 
 use stremio_core::constants::{
     DISMISSED_EVENTS_STORAGE_KEY, LIBRARY_RECENT_STORAGE_KEY, LIBRARY_STORAGE_KEY,
-    NOTIFICATIONS_STORAGE_KEY, PROFILE_STORAGE_KEY, SEARCH_HISTORY_STORAGE_KEY,
-    STREAMS_STORAGE_KEY,
+    NOTIFICATIONS_STORAGE_KEY, PROFILE_STORAGE_KEY, REMOTE_CONFIG_STORAGE_KEY,
+    SEARCH_HISTORY_STORAGE_KEY, STREAMING_SERVER_URLS_STORAGE_KEY, STREAMS_STORAGE_KEY,
 };
 use stremio_core::models::common::Loadable;
-use stremio_core::runtime::{Env, EnvError, Runtime, RuntimeEvent};
+use stremio_core::runtime::{Env, EnvError, Runtime, RuntimeAction, RuntimeEvent};
 use stremio_core::types::events::DismissedEventsBucket;
 use stremio_core::types::library::LibraryBucket;
 use stremio_core::types::notifications::NotificationsBucket;
 use stremio_core::types::profile::Profile;
+use stremio_core::types::remote_config::RemoteConfigBucket;
 use stremio_core::types::resource::Stream;
 use stremio_core::types::search_history::SearchHistoryBucket;
+use stremio_core::types::server_urls::ServerUrlsBucket;
 use stremio_core::types::streams::StreamsBucket;
+use stremio_core_protobuf::{FromProtobuf, ToProtobuf};
 
-use crate::bridge::{FromProtobuf, ToProtobuf};
 use crate::env::{AppleEnv, AppleEvent};
-use crate::model::AppleModel;
+use crate::model::{AppleModel, AppleModelBuckets, AppleModelField};
 use crate::protobuf::stremio::core::runtime;
 use crate::protobuf::stremio::core::runtime::Field;
 
@@ -70,16 +72,22 @@ pub unsafe extern "C" fn initializeNative(device_info: *mut NSString) -> *mut NS
                     AppleEnv::get_storage::<LibraryBucket>(LIBRARY_RECENT_STORAGE_KEY),
                     AppleEnv::get_storage::<LibraryBucket>(LIBRARY_STORAGE_KEY),
                     AppleEnv::get_storage::<StreamsBucket>(STREAMS_STORAGE_KEY),
-                    AppleEnv::get_storage::<NotificationsBucket>(NOTIFICATIONS_STORAGE_KEY),
+                    AppleEnv::get_storage::<ServerUrlsBucket>(STREAMING_SERVER_URLS_STORAGE_KEY),
                 ),
-                AppleEnv::get_storage::<SearchHistoryBucket>(SEARCH_HISTORY_STORAGE_KEY),
-                AppleEnv::get_storage::<DismissedEventsBucket>(DISMISSED_EVENTS_STORAGE_KEY),
+                future::try_join(
+                    AppleEnv::get_storage::<NotificationsBucket>(NOTIFICATIONS_STORAGE_KEY),
+                    AppleEnv::get_storage::<SearchHistoryBucket>(SEARCH_HISTORY_STORAGE_KEY),
+                ),
+                future::try_join(
+                    AppleEnv::get_storage::<DismissedEventsBucket>(DISMISSED_EVENTS_STORAGE_KEY),
+                    AppleEnv::get_storage::<RemoteConfigBucket>(REMOTE_CONFIG_STORAGE_KEY),
+                ),
             ));
             match storage_result {
                 Ok((
-                    (profile, recent_bucket, other_bucket, streams, notifications),
-                    search_history,
-                    dismissed_events,
+                    (profile, recent_bucket, other_bucket, streams, server_urls),
+                    (notifications, search_history),
+                    (dismissed_events, remote_config),
                 )) => {
                     let profile = profile.unwrap_or_default();
                     let mut library = LibraryBucket::new(profile.uid(), vec![]);
@@ -89,21 +97,27 @@ pub unsafe extern "C" fn initializeNative(device_info: *mut NSString) -> *mut NS
                     if let Some(other_bucket) = other_bucket {
                         library.merge_bucket(other_bucket);
                     };
-                    let streams = streams.unwrap_or(StreamsBucket::new(profile.uid()));
-                    let notifications = notifications
-                        .unwrap_or(NotificationsBucket::new::<AppleEnv>(profile.uid(), vec![]));
-                    let search_history =
-                        search_history.unwrap_or(SearchHistoryBucket::new(profile.uid()));
-                    let dismissed_events =
-                        dismissed_events.unwrap_or(DismissedEventsBucket::new(profile.uid()));
-                    let (model, effects) = AppleModel::new(
+                    let streams = streams.unwrap_or_else(|| StreamsBucket::new(profile.uid()));
+                    let server_urls = server_urls.unwrap_or_else(|| {
+                        ServerUrlsBucket::new::<AppleEnv>(profile.uid())
+                    });
+                    let notifications = notifications.unwrap_or_else(|| {
+                        NotificationsBucket::new::<AppleEnv>(profile.uid(), vec![])
+                    });
+                    let search_history = search_history
+                        .unwrap_or_else(|| SearchHistoryBucket::new(profile.uid()));
+                    let dismissed_events = dismissed_events
+                        .unwrap_or_else(|| DismissedEventsBucket::new(profile.uid()));
+                    let (model, effects) = AppleModel::new(AppleModelBuckets {
                         profile,
                         library,
                         streams,
+                        server_urls,
                         notifications,
                         search_history,
                         dismissed_events,
-                    );
+                        remote_config,
+                    });
                     let (runtime, rx) = Runtime::<AppleEnv, _>::new(
                         model,
                         effects.into_iter().collect::<Vec<_>>(),
@@ -128,7 +142,7 @@ pub unsafe extern "C" fn initializeNative(device_info: *mut NSString) -> *mut NS
                             }));
                         };
                         let eventbytes =
-                            &NSData::with_bytes(&event.to_protobuf(&()).encode_to_vec());
+                            &NSData::with_bytes(&event.to_protobuf::<AppleEnv>(&()).encode_to_vec());
                         let _: () = unsafe {
                             msg_send![stremio_core_class, onRuntimeEvent: eventbytes.as_ref()]
                         };
@@ -141,14 +155,14 @@ pub unsafe extern "C" fn initializeNative(device_info: *mut NSString) -> *mut NS
                 Err(error) => {
                     *RUNTIME.write().expect("RUNTIME write failed") =
                         Some(Loadable::Err(error.to_owned()));
-                    let result_bytes = error.to_protobuf(&()).encode_to_vec();
+                    let result_bytes = error.to_protobuf::<AppleEnv>(&()).encode_to_vec();
                     Retained::into_raw(NSData::with_bytes(result_bytes.as_ref())) as *mut NSObject
                 }
             }
         }
         Err(error) => {
             *RUNTIME.write().expect("RUNTIME write failed") = Some(Loadable::Err(error.to_owned()));
-            let result_bytes = error.to_protobuf(&()).encode_to_vec();
+            let result_bytes = error.to_protobuf::<AppleEnv>(&()).encode_to_vec();
             Retained::into_raw(NSData::with_bytes(result_bytes.as_ref())) as *mut NSObject
         }
     }
@@ -158,7 +172,8 @@ pub unsafe extern "C" fn initializeNative(device_info: *mut NSString) -> *mut NS
 pub unsafe extern "C" fn dispatchNative(action_protobuf: *mut NSObject) {
     // Convert the incoming action_protobuf bytes to a Vec<u8>
     let action_bytes = unsafe { &*(action_protobuf as *mut NSData) }.bytes();
-    let runtime_action = match runtime::RuntimeAction::decode(action_bytes) {
+    let runtime_action: RuntimeAction<AppleEnv, AppleModel> =
+        match runtime::RuntimeAction::decode(action_bytes) {
         Ok(action) => action.from_protobuf(),
         Err(err) => {
             eprintln!("Error decoding RuntimeAction protobuf: {:?}", err);
@@ -176,10 +191,9 @@ pub unsafe extern "C" fn dispatchNative(action_protobuf: *mut NSObject) {
 
 #[no_mangle]
 pub unsafe extern "C" fn getStateNative(field: i32) -> *mut NSObject {
-    let field = Field::try_from(field)
-        .ok()
-        .from_protobuf()
-        .expect("AppleModelField convert failed");
+    let field: AppleModelField = Field::try_from(field)
+        .expect("AppleModelField convert failed")
+        .into();
     let runtime = RUNTIME.read().expect("RUNTIME read failed");
     let runtime = runtime
         .as_ref()
@@ -195,9 +209,9 @@ pub unsafe extern "C" fn getStateNative(field: i32) -> *mut NSObject {
 #[no_mangle]
 pub unsafe extern "C" fn decodeStreamDataNative(field: *mut NSString) -> *mut NSObject {
     let field = &*field;
-    let stream = match Stream::decode(field.to_string()) {
+    let stream = match Stream::decode(&field.to_string()) {
         Ok(stream) => stream
-            .to_protobuf(&(None, None, None, None))
+            .to_protobuf::<AppleEnv>(&(None, None, None, None, None))
             .encode_to_vec(),
         Err(_) => return Nil as *mut NSObject,
     };

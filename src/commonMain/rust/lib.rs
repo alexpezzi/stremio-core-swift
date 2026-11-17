@@ -1,8 +1,12 @@
 #![allow(clippy::module_inception)]
-pub mod bridge;
 pub mod env;
-pub mod model;
-#[allow(clippy::all)]
-/// Auto-generated module from protobuf files to Rust structus
-pub mod protobuf;
+pub mod model {
+    pub use model::*;
+
+    mod apple_model_field;
+    mod model;
+}
+pub mod protobuf {
+    pub use stremio_core_protobuf::protobuf::*;
+}
 pub mod stremio_core_apple;

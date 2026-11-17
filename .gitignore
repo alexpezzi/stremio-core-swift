@@ -2,8 +2,7 @@
 /target
 /src/debug
 /src/release
-/**/rust/protobuf/*
-!/**/rust/protobuf/README.md
+/stremio-core-protobuf/src/protobuf/*
 /.idea/
 /local.properties
 /bridge/stremio/

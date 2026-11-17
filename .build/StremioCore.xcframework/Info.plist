@@ -23,48 +23,19 @@
 		</dict>
 		<dict>
 			<key>BinaryPath</key>
-			<string>libstremio_core_swift-tvos.a</string>
+			<string>libstremio_core_swift-visionos-sim.a</string>
 			<key>LibraryIdentifier</key>
-			<string>tvos-arm64</string>
+			<string>xros-arm64-simulator</string>
 			<key>LibraryPath</key>
-			<string>libstremio_core_swift-tvos.a</string>
+			<string>libstremio_core_swift-visionos-sim.a</string>
 			<key>SupportedArchitectures</key>
 			<array>
 				<string>arm64</string>
 			</array>
 			<key>SupportedPlatform</key>
-			<string>tvos</string>
-		</dict>
-		<dict>
-			<key>BinaryPath</key>
-			<string>libstremio_core_swift-tvos-sim.a</string>
-			<key>LibraryIdentifier</key>
-			<string>tvos-arm64_x86_64-simulator</string>
-			<key>LibraryPath</key>
-			<string>libstremio_core_swift-tvos-sim.a</string>
-			<key>SupportedArchitectures</key>
-			<array>
-				<string>arm64</string>
-				<string>x86_64</string>
-			</array>
-			<key>SupportedPlatform</key>
-			<string>tvos</string>
+			<string>xros</string>
 			<key>SupportedPlatformVariant</key>
 			<string>simulator</string>
-		</dict>
-		<dict>
-			<key>BinaryPath</key>
-			<string>libstremio_core_swift-ios.a</string>
-			<key>LibraryIdentifier</key>
-			<string>ios-arm64</string>
-			<key>LibraryPath</key>
-			<string>libstremio_core_swift-ios.a</string>
-			<key>SupportedArchitectures</key>
-			<array>
-				<string>arm64</string>
-			</array>
-			<key>SupportedPlatform</key>
-			<string>ios</string>
 		</dict>
 		<dict>
 			<key>BinaryPath</key>
@@ -85,19 +56,48 @@
 		</dict>
 		<dict>
 			<key>BinaryPath</key>
-			<string>libstremio_core_swift-visionos-sim.a</string>
+			<string>libstremio_core_swift-tvos-sim.a</string>
 			<key>LibraryIdentifier</key>
-			<string>xros-arm64-simulator</string>
+			<string>tvos-arm64_x86_64-simulator</string>
 			<key>LibraryPath</key>
-			<string>libstremio_core_swift-visionos-sim.a</string>
+			<string>libstremio_core_swift-tvos-sim.a</string>
+			<key>SupportedArchitectures</key>
+			<array>
+				<string>arm64</string>
+				<string>x86_64</string>
+			</array>
+			<key>SupportedPlatform</key>
+			<string>tvos</string>
+			<key>SupportedPlatformVariant</key>
+			<string>simulator</string>
+		</dict>
+		<dict>
+			<key>BinaryPath</key>
+			<string>libstremio_core_swift-tvos.a</string>
+			<key>LibraryIdentifier</key>
+			<string>tvos-arm64</string>
+			<key>LibraryPath</key>
+			<string>libstremio_core_swift-tvos.a</string>
 			<key>SupportedArchitectures</key>
 			<array>
 				<string>arm64</string>
 			</array>
 			<key>SupportedPlatform</key>
-			<string>xros</string>
-			<key>SupportedPlatformVariant</key>
-			<string>simulator</string>
+			<string>tvos</string>
+		</dict>
+		<dict>
+			<key>BinaryPath</key>
+			<string>libstremio_core_swift-ios.a</string>
+			<key>LibraryIdentifier</key>
+			<string>ios-arm64</string>
+			<key>LibraryPath</key>
+			<string>libstremio_core_swift-ios.a</string>
+			<key>SupportedArchitectures</key>
+			<array>
+				<string>arm64</string>
+			</array>
+			<key>SupportedPlatform</key>
+			<string>ios</string>
 		</dict>
 	</array>
 	<key>CFBundlePackageType</key>

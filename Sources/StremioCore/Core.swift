@@ -158,13 +158,18 @@ fileprivate func getDeviceInfo() -> String {
     return "(\(modelIdentifier); \(osType) \(osVersion))"
 }
 
-//TODO: Find a way to get tag properly
 extension SwiftProtobuf.Message {
+    /// Field number of the first field on the wire, i.e. the set case of a oneof-only message.
     var getMessageTag: Int {
-        let def = try! SwiftProtobuf.Google_Protobuf_MessageOptions(serializedData: self.serializedData())
-        var messageText = def.textFormatString().components(separatedBy: "\n").first
-        messageText = messageText?.replacingOccurrences(of: " {", with: "")
-        return Int(messageText!) ?? 0
+        guard let data = try? serializedData(partial: true) else { return 0 }
+        var key = 0
+        var shift = 0
+        for byte in data {
+            key |= Int(byte & 0x7f) << shift
+            if byte & 0x80 == 0 { return key >> 3 }
+            shift += 7
+        }
+        return 0
     }
 }
 

@@ -10,6 +10,7 @@ use stremio_core::{
     analytics::Analytics,
     models::{ctx::Ctx, streaming_server::StreamingServer},
     runtime::{Env, EnvError, EnvFuture, EnvFutureExt, TryEnvFuture},
+    types::remote_config::ClientInfo,
 };
 
 use crate::{
@@ -164,6 +165,28 @@ impl Env for AppleEnv {
     }
     fn now() -> DateTime<Utc> {
         Utc::now()
+    }
+    fn client_info() -> ClientInfo {
+        let platform = if cfg!(target_os = "tvos") {
+            "tvos"
+        } else if cfg!(target_os = "visionos") {
+            "visionos"
+        } else if cfg!(target_os = "macos") || cfg!(target_abi = "macabi") {
+            "macos"
+        } else {
+            "ios"
+        };
+        ClientInfo {
+            platform: platform.to_owned(),
+            os: Some(platform.to_owned()),
+            app_version: Some(env!("CARGO_PKG_VERSION").to_owned()),
+            shell_version: None,
+            installation_id: INSTALLATION_ID
+                .read()
+                .expect("installation id read failed")
+                .to_owned(),
+            notification_templates: vec![],
+        }
     }
     fn flush_analytics() -> EnvFuture<'static, ()> {
         ANALYTICS.flush().boxed_env()

@@ -21,6 +21,7 @@
                 "stremio/core/runtime/action_catalogs_with_extra.proto",
                 "stremio/core/runtime/action_ctx.proto",
                 "stremio/core/runtime/action_library_by_type.proto",
+                "stremio/core/runtime/action_library_with_filters.proto",
                 "stremio/core/runtime/action_link.proto",
                 "stremio/core/runtime/action_load.proto",
                 "stremio/core/runtime/action_meta_details.proto",
@@ -37,7 +38,9 @@
                 "stremio/core/types/meta_item.proto",
                 "stremio/core/types/meta_item_preview.proto",
                 "stremio/core/types/profile.proto",
+                "stremio/core/types/rating.proto",
                 "stremio/core/types/stream.proto",
+                "stremio/core/types/streaming_server_urls.proto",
                 "stremio/core/types/subtitle.proto",
                 "stremio/core/types/video.proto"
             ],

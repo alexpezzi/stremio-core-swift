@@ -63,7 +63,6 @@ framework:
 		-output .build/$(FRAMEWORK_NAME).xcframework
 
 package: framework
-	@$(RM) -rf Sources/StremioCore/stremio
 	@cbindgen --config Support/cbindgen.toml -o Sources/Wrapper/include/wrapper.h
 
 manifest:
