@@ -67,9 +67,9 @@ struct AnalyticsContext {
 pub enum AppleEnv {}
 
 impl AppleEnv {
-    pub fn init() -> TryEnvFuture<()> {
+    pub fn init(storage_suite_name: Option<String>) -> TryEnvFuture<()> {
         *STORAGE.write().expect("STORAGE write failed") =
-            Some(Storage::new().expect("Create Storage failed"));
+            Some(Storage::new(storage_suite_name).expect("Create Storage failed"));
         AppleEnv::migrate_storage_schema()
             .and_then(|_| async {
                 let installation_id = get_installation_id().await?;

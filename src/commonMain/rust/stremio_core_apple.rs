@@ -55,14 +55,20 @@ pub extern "C" fn initialize_rust() {
     }));
 }
 
+/// Loads the runtime from storage. `storage_suite_name` is the user defaults suite to store in,
+/// such as an app group shared with app extensions, or null for the standard user defaults.
+///
+/// It can be called again to reload the runtime from storage, for example in an app extension
+/// whose app changed the shared storage. The device name of the first call is kept.
 #[no_mangle]
-pub unsafe extern "C" fn initializeNative(device_info: *mut NSString) -> *mut NSObject {
-    let init_result = AppleEnv::exec_sync(AppleEnv::init());
+pub unsafe extern "C" fn initializeNative(
+    device_info: *mut NSString,
+    storage_suite_name: *mut NSString,
+) -> *mut NSObject {
+    let storage_suite_name = unsafe { storage_suite_name.as_ref() }.map(|name| name.to_string());
+    let init_result = AppleEnv::exec_sync(AppleEnv::init(storage_suite_name));
 
-    // Set the device name only once on initialization!
-    DEVICE_NAME
-        .set(unsafe { &*device_info }.to_string())
-        .expect("Device name should be set only once!");
+    let _ = DEVICE_NAME.set(unsafe { &*device_info }.to_string());
 
     match init_result {
         Ok(_) => {

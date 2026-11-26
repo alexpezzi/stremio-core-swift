@@ -73,10 +73,13 @@ public class Core {
     }
 
     //MARK: - rust calls
-    public static func initialize() -> Stremio_Core_Runtime_EnvError? {
+    /// Loads the runtime from storage. Pass an app group as `storageSuiteName` to share storage with
+    /// app extensions; the standard user defaults are used otherwise. Calling it again reloads the
+    /// runtime from storage.
+    public static func initialize(storageSuiteName: String? = nil) -> Stremio_Core_Runtime_EnvError? {
         initialize_rust()
         do {
-            if let swiftData = initializeNative(getDeviceInfo()) as? NSData{
+            if let swiftData = initializeNative(getDeviceInfo(), storageSuiteName) as? NSData{
                 defer {defer {releaseObjectNative(swiftData)}}
                 return try Stremio_Core_Runtime_EnvError(serializedData: swiftData as Data)
             }
